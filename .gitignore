@@ -1,0 +1,4 @@
+# Router config backups and generated OpenWrt UCI snippets
+*.cfg
+*.CFG
+*.conf
