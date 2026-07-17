@@ -120,6 +120,29 @@ function port_range(p) {
   return p
 }
 
+# Quotes a value for safe embedding as a UCI option value. UCI has no
+# in-quote escape for the quote character itself, so switch to double
+# quotes when the value contains a single quote. We do not need the
+# reverse case since we always default to single quotes otherwise.
+function uciq(s) {
+  if (index(s, "\047") > 0) {
+    if (index(s, "\"") == 0) return "\"" s "\""
+    gsub(/\047/, "", s)  # value has both quote types - strip single quotes as a last resort
+  }
+  return "\047" s "\047"
+}
+
+# UCI dhcp "config host" option name is used by dnsmasq as an actual
+# hostname, so it must be sanitized to valid hostname characters -
+# unlike other option name/label fields, which are purely descriptive.
+function sanitize_host(s,    r) {
+  r = s
+  gsub(/[^A-Za-z0-9_-]/, "-", r)
+  gsub(/-+/, "-", r)
+  gsub(/^-+|-+$/, "", r)
+  return r
+}
+
 {
   line = $0
   eq = index(line, "=")
@@ -152,17 +175,19 @@ END {
       limit = end_int - start_int + 1
       print "config dhcp \047lan\047" >> dhcp_out
       print "\toption interface \047lan\047" >> dhcp_out
-      print "\toption start \047" start_off "\047" >> dhcp_out
-      print "\toption limit \047" limit "\047" >> dhcp_out
+      print "\toption start " uciq(start_off) >> dhcp_out
+      print "\toption limit " uciq(limit) >> dhcp_out
       if (lease != "") {
-        print "\toption leasetime \047" lease "s\047" >> dhcp_out
+        # dnsmasq accepts a bare number as seconds; "86400s" is not a
+        # documented unit suffix (only m/h/d/w/infinite are).
+        print "\toption leasetime " uciq(lease) >> dhcp_out
       }
       dns1 = kv["dhcp_dns1_x"]
       dns2 = kv["dhcp_dns2_x"]
       if (dns1 != "") {
         optline = "6," dns1
         if (dns2 != "") optline = optline "," dns2
-        print "\tlist dhcp_option \047" optline "\047" >> dhcp_out
+        print "\tlist dhcp_option " uciq(optline) >> dhcp_out
       }
       print "" >> dhcp_out
       dhcp_pool_done = 1
@@ -190,10 +215,11 @@ END {
         host = "static-" ip
         gsub(/\./, "-", host)
       }
+      host = sanitize_host(host)
       print "config host" >> dhcp_out
-      print "\toption name \047" host "\047" >> dhcp_out
-      print "\toption mac \047" mac "\047" >> dhcp_out
-      print "\toption ip \047" f[2] "\047" >> dhcp_out
+      print "\toption name " uciq(host) >> dhcp_out
+      print "\toption mac " uciq(mac) >> dhcp_out
+      print "\toption ip " uciq(f[2]) >> dhcp_out
       print "" >> dhcp_out
     }
   }
@@ -220,13 +246,13 @@ END {
       fw_n++
       if (localport == "") localport = extport
       print "config redirect" >> fw_out
-      print "\toption name \047" name "\047" >> fw_out
+      print "\toption name " uciq(name) >> fw_out
       print "\toption src \047wan\047" >> fw_out
-      print "\toption src_dport \047" port_range(extport) "\047" >> fw_out
+      print "\toption src_dport " uciq(port_range(extport)) >> fw_out
       print "\toption dest \047lan\047" >> fw_out
-      print "\toption dest_ip \047" localip "\047" >> fw_out
-      print "\toption dest_port \047" port_range(localport) "\047" >> fw_out
-      print "\toption proto \047" proto_name(proto) "\047" >> fw_out
+      print "\toption dest_ip " uciq(localip) >> fw_out
+      print "\toption dest_port " uciq(port_range(localport)) >> fw_out
+      print "\toption proto " uciq(proto_name(proto)) >> fw_out
       print "" >> fw_out
     }
   }
@@ -264,9 +290,9 @@ END {
       if (enable == "2") {
         block_n++
         print "config rule" >> fw_out
-        print "\toption name \047Block " dname "\047" >> fw_out
+        print "\toption name " uciq("Block " dname) >> fw_out
         print "\toption src \047lan\047" >> fw_out
-        print "\toption src_mac \047" mac "\047" >> fw_out
+        print "\toption src_mac " uciq(mac) >> fw_out
         print "\toption dest \047wan\047" >> fw_out
         print "\toption target \047REJECT\047" >> fw_out
         print "" >> fw_out
@@ -292,21 +318,21 @@ END {
   wan_proto = kv["wan_proto"]
   if (wan_proto != "") {
     print "config interface \047wan\047" >> wan_out
-    print "\toption proto \047" wan_proto "\047" >> wan_out
+    print "\toption proto " uciq(wan_proto) >> wan_out
     if (wan_proto == "static") {
-      if (kv["wan_ipaddr"] != "") print "\toption ipaddr \047" kv["wan_ipaddr"] "\047" >> wan_out
-      if (kv["wan_netmask"] != "") print "\toption netmask \047" kv["wan_netmask"] "\047" >> wan_out
-      if (kv["wan_gateway"] != "") print "\toption gateway \047" kv["wan_gateway"] "\047" >> wan_out
+      if (kv["wan_ipaddr"] != "") print "\toption ipaddr " uciq(kv["wan_ipaddr"]) >> wan_out
+      if (kv["wan_netmask"] != "") print "\toption netmask " uciq(kv["wan_netmask"]) >> wan_out
+      if (kv["wan_gateway"] != "") print "\toption gateway " uciq(kv["wan_gateway"]) >> wan_out
       dns1 = kv["wan_dns1_x"]
       dns2 = kv["wan_dns2_x"]
       if (dns1 != "") {
         dnsval = dns1
         if (dns2 != "") dnsval = dnsval " " dns2
-        print "\toption dns \047" dnsval "\047" >> wan_out
+        print "\toption dns " uciq(dnsval) >> wan_out
       }
     } else if (wan_proto == "pppoe") {
-      if (kv["wan_pppoe_username"] != "") print "\toption username \047" kv["wan_pppoe_username"] "\047" >> wan_out
-      if (kv["wan_pppoe_passwd"] != "") print "\toption password \047" kv["wan_pppoe_passwd"] "\047" >> wan_out
+      if (kv["wan_pppoe_username"] != "") print "\toption username " uciq(kv["wan_pppoe_username"]) >> wan_out
+      if (kv["wan_pppoe_passwd"] != "") print "\toption password " uciq(kv["wan_pppoe_passwd"]) >> wan_out
     } else {
       print "\t# proto is \047" wan_proto "\047 (e.g. dhcp) - no further fields needed;" >> wan_out
       print "\t# any wan_ipaddr/wan_gateway in the source file are stale DHCP-leased" >> wan_out

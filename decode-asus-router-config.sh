@@ -101,14 +101,12 @@ BEGIN { idx = 0 }
 END {
   if (skip != 1) {
     if (b[0] != 72 || b[1] != 68 || b[2] != 82 || b[3] != 50) {
-      print "File header check failed." > "/dev/stderr"
       exit 2
     }
   }
 
   datalen = b[4] + b[5] * 256 + b[6] * 65536
   if (datalen != (size - 8)) {
-    print "Data length check failed." > "/dev/stderr"
     exit 3
   }
 
