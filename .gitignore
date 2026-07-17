@@ -1,4 +1,9 @@
-# Router config backups and generated OpenWrt UCI snippets
+# Router config backups
 *.cfg
 *.CFG
-*.conf
+
+# Generated OpenWrt UCI snippets (extensionless, matching OpenWrt's own
+# /etc/config/* naming)
+openwrt-dhcp
+openwrt-firewall
+openwrt-network

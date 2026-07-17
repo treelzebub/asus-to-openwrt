@@ -8,7 +8,7 @@ UCI config snippets for OpenWrt.
 Two scripts, meant to be run in sequence:
 
 ```
-Settings_XXXXX.CFG  --[decode-asus-router-config.sh]-->  Settings_XXXXX_Decoded.txt  --[convert-to-openwrt.sh]-->  OpenWrt UCI snippets
+Settings_XXXXX.CFG  --[decode-asus-router-config.sh]-->  Settings_XXXXX_Decoded.cfg  --[convert-to-openwrt.sh]-->  OpenWrt UCI snippets
 ```
 
 Pure `bash` + standard Unix tools (`awk`, `od`, `grep`, `sed`) — no
@@ -36,10 +36,10 @@ PowerShell, no runtime dependencies to install.
 Output defaults to `./output/` (relative to your current directory) unless
 `-d` is given. Produces:
 
-- `<name>_Decoded.txt` — the full decoded nvram key=value dump
-- `<name>_Credentials.txt` — admin login, PPPoE credentials, paired
+- `<name>_Decoded.cfg` — the full decoded nvram key=value dump
+- `<name>_Credentials.cfg` — admin login, PPPoE credentials, paired
   SSID/WPA-PSK values (if found)
-- `<name>_DHCP.txt` — formatted DHCP static-lease table (if found)
+- `<name>_DHCP.cfg` — formatted DHCP static-lease table (if found)
 
 `--skip-header-check` skips validation of the file's 4-byte header tag, which
 varies by model (see [Compatibility](#compatibility)); use it if you get a
@@ -48,21 +48,23 @@ header-check failure on an otherwise-valid file.
 ### 2. Convert the decoded dump to OpenWrt UCI config
 
 ```
-./convert-to-openwrt.sh <decoded.txt> [-d output-destination-path]
+./convert-to-openwrt.sh <decoded.cfg> [-d output-destination-path]
 ```
 
 ```
-./convert-to-openwrt.sh ./output/Settings_RT-AX86U_Decoded.txt
-./convert-to-openwrt.sh ./output/Settings_RT-AX86U_Decoded.txt -d './openwrt-config'
+./convert-to-openwrt.sh ./output/Settings_RT-AX86U_Decoded.cfg
+./convert-to-openwrt.sh ./output/Settings_RT-AX86U_Decoded.cfg -d './openwrt-config'
 ```
 
-Output defaults to `./output/` unless `-d` is given. Produces:
+Output defaults to `./output/` unless `-d` is given. Produces (deliberately
+extensionless, matching OpenWrt's own `/etc/config/*` naming):
 
-- `<name>_OpenWrt_DHCP.conf` — DHCP pool range, DNS, static leases (`config host`)
-- `<name>_OpenWrt_Firewall.conf` — port forwards (`config redirect`) and
+- `openwrt-dhcp` — DHCP pool range, DNS, static leases (`config host`)
+- `openwrt-firewall` — port forwards (`config redirect`) and
   device-level internet blocking (`config rule`, by MAC)
-- `<name>_OpenWrt_WAN.conf` — WAN proto and, if applicable, static
-  IP/gateway/DNS or PPPoE credentials
+- `openwrt-network` — WAN proto and, if applicable, static
+  IP/gateway/DNS or PPPoE credentials (a subset of `/etc/config/network`,
+  since OpenWrt has no standalone "wan" config)
 
 **None of these are meant to be applied with a blind `uci import`.** Review
 each file and merge the relevant `config`/`option` blocks into your existing

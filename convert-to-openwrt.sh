@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Converts an Asus router *_Decoded.txt (nvram key=value dump, produced by
+# Converts an Asus router *_Decoded.cfg (nvram key=value dump, produced by
 # decode-asus-router-config.sh or Decode-AsusRouterConfig.ps1) into UCI
 # config snippets for OpenWrt: DHCP (pool range, DNS, static leases),
 # port forwarding (firewall redirects), device-level network blocking
@@ -19,7 +19,7 @@
 #     raw nvram value, not auto-decoded (format not reliably verified).
 #
 # Usage:
-#   ./convert-to-openwrt.sh <decoded.txt> [-d output-destination-path]
+#   ./convert-to-openwrt.sh <decoded.cfg> [-d output-destination-path]
 #
 # Output defaults to ./output/ (relative to the current directory) unless -d is given.
 
@@ -31,7 +31,7 @@ YELLOW=$'\033[0;33m'
 NC=$'\033[0m'
 
 usage() {
-  echo "Usage: $0 <decoded.txt> [-d output-destination-path]" >&2
+  echo "Usage: $0 <decoded.cfg> [-d output-destination-path]" >&2
 }
 
 FILE=""
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$FILE" || ! -f "$FILE" ]]; then
-  echo " Provide the path to a *_Decoded.txt file." >&2
+  echo " Provide the path to a *_Decoded.cfg file." >&2
   usage
   exit 1
 fi
@@ -70,13 +70,9 @@ OUTDIR="${OUTDIR:-./output}"
 mkdir -p "$OUTDIR"
 OUTDIR="$(cd "$OUTDIR" && pwd)"
 
-BASENAME="$(basename "$FILE")"
-NAME_NO_EXT="${BASENAME%.*}"
-NAME_NO_EXT="${NAME_NO_EXT%_Decoded}"
-
-DHCP_OUT="$OUTDIR/${NAME_NO_EXT}_OpenWrt_DHCP.conf"
-FW_OUT="$OUTDIR/${NAME_NO_EXT}_OpenWrt_Firewall.conf"
-WAN_OUT="$OUTDIR/${NAME_NO_EXT}_OpenWrt_WAN.conf"
+DHCP_OUT="$OUTDIR/openwrt-dhcp"
+FW_OUT="$OUTDIR/openwrt-firewall"
+WAN_OUT="$OUTDIR/openwrt-network"
 
 awk -v dhcp_out="$DHCP_OUT" -v fw_out="$FW_OUT" -v wan_out="$WAN_OUT" '
 function ip2int(ip,    o, n) {

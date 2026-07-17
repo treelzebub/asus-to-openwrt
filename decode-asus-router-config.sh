@@ -83,7 +83,7 @@ OUTDIR="$(cd "$OUTDIR" && pwd)"
 
 BASENAME="$(basename "$FILE")"
 NAME_NO_EXT="${BASENAME%.*}"
-OUTPUT_FILE="$OUTDIR/${NAME_NO_EXT}_Decoded.txt"
+OUTPUT_FILE="$OUTDIR/${NAME_NO_EXT}_Decoded.cfg"
 
 # Decode: read the file as a stream of byte values and run the XOR-ish
 # unshift algorithm in awk (byte 0 in the file marks the start; byte 7 is
@@ -154,7 +154,7 @@ if [[ -n "$DHCP_LINE" ]]; then
   DHCP_CONTENT="${DHCP_LINE#dhcp_staticlist=}"
   HEADER="        MAC       |      IP       |   HostName "
   DHCP_FORMATTED="$(printf '%s' "$DHCP_CONTENT" | tr '<' '\n' | sed 's/>>/ | /g; s/>/ | /g')"
-  DHCP_FILE="$OUTDIR/${NAME_NO_EXT}_DHCP.txt"
+  DHCP_FILE="$OUTDIR/${NAME_NO_EXT}_DHCP.cfg"
   printf '%s%s\n' "$HEADER" "$DHCP_FORMATTED" > "$DHCP_FILE"
   echo " ->DHCP client list has been saved to:"
   echo "   ${GREEN}${DHCP_FILE}${NC}"
@@ -199,7 +199,7 @@ fi
 echo "${GREEN}${SEP}${NC}"
 
 if [[ -n "$PAIRED_CRED_LINES" ]]; then
-  CRED_FILE="$OUTDIR/${NAME_NO_EXT}_Credentials.txt"
+  CRED_FILE="$OUTDIR/${NAME_NO_EXT}_Credentials.cfg"
   printf '%s\n' "$PAIRED_CRED_LINES" > "$CRED_FILE"
   echo " ->Credentials have been saved to:"
   echo "   ${GREEN}${CRED_FILE}${NC}"
