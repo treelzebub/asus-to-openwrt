@@ -1,4 +1,5 @@
 # asus-to-openwrt-converter
+_Built with the aid of unpaid LLM agents who were barely verbally abused at all._
 
 Decode an Asus router's `.CFG` backup file and convert the useful bits — DHCP
 static leases, port forwarding, device-level blocking, WAN settings — into
