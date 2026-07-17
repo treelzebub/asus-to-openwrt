@@ -40,9 +40,9 @@ Output defaults to `./output/` (relative to your current directory) unless
   SSID/WPA-PSK values (if found)
 - `<name>_DHCP.txt` — formatted DHCP static-lease table (if found)
 
-`--skip-header-check` skips validation of the `HDR2` magic bytes some
-firmware/models omit or replace; use it if you get a header-check failure on
-an otherwise-valid file.
+`--skip-header-check` skips validation of the file's 4-byte header tag, which
+varies by model (see [Compatibility](#compatibility)); use it if you get a
+header-check failure on an otherwise-valid file.
 
 ### 2. Convert the decoded dump to OpenWrt UCI config
 
@@ -104,6 +104,45 @@ The permanent-vs-scheduled distinction is inferred from
 `MULTIFILTER_ENABLE` (`2` = permanent block, `1` = time-scheduled) based on
 observed data — verify this against your own router's Parental Controls UI
 before relying on it, since it isn't officially documented.
+
+## Compatibility
+
+### Asus routers
+
+Tested against real data from RT-ACRH13, RT-BE88U, RT-AX86U Pro, RT-AC86U,
+and AX58U — spanning both Broadcom and Qualcomm-based hardware and roughly a
+decade of firmware generations. The underlying `.CFG` container format and
+nvram key namespace (`dhcp_*`, `lan_*`, `wan_*`, `wl*_*`, `vts_rulelist`,
+`MULTIFILTER_*`) appear stable across the Asuswrt/Asuswrt-Merlin firmware
+lineage on standalone RT-series routers generally, not just these five.
+
+**A header tag mismatch is expected on some models, not a sign of a bad
+file.** The `.CFG` file's 8-byte header is `[4-byte tag][3-byte body
+size][1-byte randkey]`. The 4-byte tag is sometimes the literal string
+`HDR2`, but on some models/firmware it's a model-name stamp instead (e.g.
+`N55U`, `AC55U`) — confirmed against real RT-ACRH13 data, whose tag was
+`AC55`, the truncated form of `AC55U`. The byte offsets for size/randkey are
+fixed regardless of the tag, so if `decode-asus-router-config.sh` fails
+header validation, `--skip-header-check` is almost always safe to use.
+
+**Known incompatible:** Asus's DSL-integrated modem/routers (e.g.
+DSL-AC52U) export a differently-named file (`romfile.cfg`) using a
+different container format, which this script doesn't handle — [a
+separate tool](https://github.com/pawitp/asus-romfile-tools) exists for
+that. Very old, pre-Asuswrt-unification hardware (roughly pre-2013) is
+untested and unverified either way.
+
+### OpenWrt
+
+UCI's `config`/`option`/`list` syntax has been stable across essentially
+the entire modern OpenWrt release history, so the generated snippets
+aren't tied to a specific version. The one thing worth calling out:
+OpenWrt switched its default firewall backend from fw3 (iptables) to fw4
+(nftables) in 22.03, but fw4 was deliberately built to consume the same
+UCI firewall schema as fw3 for common configs — so the `config
+redirect`/`config rule` sections here work unmodified whether you're on
+an older fw3-based release (≤21.02) or a current fw4-based one (22.03+).
+DHCP config targets dnsmasq, which is unchanged across all these releases.
 
 ## Credits
 
